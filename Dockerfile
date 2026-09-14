@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xfce4 \
     xfce4-goodies \
     tigervnc-standalone-server \
+    tigervnc-common \
+    tigervnc-tools \
     novnc \
     websockify \
     dbus-x11 \
@@ -39,7 +41,6 @@ EXPOSE 5901
 EXPOSE 6080
 
 CMD bash -c '\
-# Mengambil password dari variabel Railway, jika kosong gunakan default "rahasia"
 echo "${VNC_PASSWORD:-rahasia}" | vncpasswd -f > /root/.vnc/passwd && \
 chmod 600 /root/.vnc/passwd && \
 vncserver :1 \
