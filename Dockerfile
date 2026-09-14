@@ -5,7 +5,7 @@ ENV TZ=Asia/Jakarta
 ENV USER=root
 
 # Penanda versi Dockerfile
-ENV DOCKERFILE_VERSION=2026-09-14-VNC-FIX-02
+ENV DOCKERFILE_VERSION=2026-09-14-VNC-SSH-FIX-03
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     xfce4 \
@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     firefox \
     openssl \
     python3-numpy \
+    openssh-server \
     && rm -rf /var/lib/apt/lists/*
 
 # Xauthority dan VNC directory
@@ -43,19 +44,60 @@ startxfce4\n' > /root/.vnc/xstartup
 
 RUN chmod +x /root/.vnc/xstartup
 
+# Setup SSH Server
+RUN mkdir /run/sshd
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+# Setup Ngrok
+RUN wget -qO- https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz | tar xvz -C /usr/local/bin
+
 EXPOSE 5901
 EXPOSE 6080
+EXPOSE 22
 
 CMD ["/bin/bash", "-c", "\
 echo ''; \
 echo '========================================'; \
-echo '       RAILWAY VNC CONTAINER'; \
+echo '       RAILWAY VNC & SSH CONTAINER'; \
 echo '========================================'; \
 echo \"Dockerfile version : ${DOCKERFILE_VERSION}\"; \
 echo \"Container hostname : $(hostname)\"; \
 echo '========================================'; \
 echo ''; \
 \
+# --- KONFIGURASI SSH & NGROK --- \
+SSH_PASS=\"${SSH_PASSWORD:-RahasiaSSH99}\"; \
+echo \"root:$SSH_PASS\" | chpasswd; \
+echo '[OK] Password SSH diatur.'; \
+\
+/usr/sbin/sshd; \
+echo '[OK] SSH Server started.'; \
+echo ''; \
+\
+if [ -n \"$NGROK_AUTHTOKEN\" ]; then \
+    echo '[INFO] Mengonfigurasi Ngrok...'; \
+    ngrok config add-authtoken \"$NGROK_AUTHTOKEN\" >/dev/null 2>&1; \
+    ngrok tcp 22 > /dev/null & \
+    echo '[INFO] Menunggu Ngrok terhubung (5 detik)...'; \
+    sleep 5; \
+    NGROK_URL=\"$(curl -s http://localhost:4040/api/tunnels | grep -o '\"public_url\":\"[^\"]*\"' | cut -d'\"' -f4)\"; \
+    echo ''; \
+    echo '========================================'; \
+    echo '           ALAMAT SSH READY'; \
+    echo '========================================'; \
+    if [ -n \"$NGROK_URL\" ]; then \
+        echo \"URL Ngrok : $NGROK_URL\"; \
+    else \
+        echo '[ERROR] Gagal mendapatkan URL Ngrok.'; \
+    fi; \
+    echo '========================================'; \
+    echo ''; \
+else \
+    echo '[WARN] NGROK_AUTHTOKEN tidak ditemukan. Tunnel SSH dilewati.'; \
+    echo ''; \
+fi; \
+\
+# --- KONFIGURASI VNC --- \
 RAW_PASSWORD=\"${VNC_PASSWORD:-}\"; \
 \
 PASS=\"$(printf '%s' \"$RAW_PASSWORD\" | tr -d '\\r\\n')\"; \
