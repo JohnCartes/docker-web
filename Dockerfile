@@ -42,13 +42,18 @@ EXPOSE 5901
 EXPOSE 6080
 
 CMD bash -c '\
-# Mengambil password HANYA dari Railway.
+# Membaca variabel dari Railway
 PASS="${VNC_PASSWORD}" && \
-# Jika variabel Railway gagal terbaca, gunakan password acak agar tetap aman
-if [ -z "$PASS" ]; then PASS="AcakAman99!"; fi && \
+# Jika kosong, gunakan default
+if [ -z "$PASS" ]; then PASS="AcakAman99"; fi && \
+\
+echo "=== CEK VARIABEL RAILWAY ===" && \
+echo "Panjang karakter password yang terbaca adalah: ${#PASS} huruf." && \
+echo "============================" && \
 \
 mkdir -p /root/.vnc && \
-echo "$PASS" | vncpasswd -f > /root/.vnc/passwd && \
+# Menggunakan printf (bukan echo) agar tidak ada tambahan karakter Enter (\n) secara otomatis
+printf "%s" "$PASS" | vncpasswd -f > /root/.vnc/passwd && \
 chmod 600 /root/.vnc/passwd && \
 \
 vncserver :1 \
