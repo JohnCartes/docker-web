@@ -42,9 +42,11 @@ EXPOSE 5901
 EXPOSE 6080
 
 CMD bash -c '\
-# Membaca variabel dari Railway
-PASS="${VNC_PASSWORD}" && \
-# Jika kosong, gunakan default
+# Membaca variabel dari Railway dan membuang HAPUS SEMUA karakter Enter/Spasi tersembunyi
+# Perintah tr -d "\n\r" akan menghapus karakter newline dan carriage return
+PASS=$(echo -n "${VNC_PASSWORD}" | tr -d "\n\r") && \
+\
+# Jika ternyata kosong, gunakan password cadangan
 if [ -z "$PASS" ]; then PASS="AcakAman99"; fi && \
 \
 echo "=== CEK VARIABEL RAILWAY ===" && \
@@ -52,7 +54,7 @@ echo "Panjang karakter password yang terbaca adalah: ${#PASS} huruf." && \
 echo "============================" && \
 \
 mkdir -p /root/.vnc && \
-# Menggunakan printf (bukan echo) agar tidak ada tambahan karakter Enter (\n) secara otomatis
+# Buat password VNC
 printf "%s" "$PASS" | vncpasswd -f > /root/.vnc/passwd && \
 chmod 600 /root/.vnc/passwd && \
 \
