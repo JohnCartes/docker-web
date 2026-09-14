@@ -2,6 +2,7 @@ FROM --platform=linux/amd64 ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Jakarta
+ENV USER=root
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     xfce4 \
@@ -26,12 +27,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN touch /root/.Xauthority
-
 RUN mkdir -p /root/.vnc
 
+# Perbaikan xstartup script
 RUN printf '#!/bin/bash\n\
-xrdb $HOME/.Xresources\n\
-startxfce4 &\n' > /root/.vnc/xstartup
+export USER=root\n\
+startxfce4\n' > /root/.vnc/xstartup
 
 RUN chmod +x /root/.vnc/xstartup
 
