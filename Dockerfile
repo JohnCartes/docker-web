@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tzdata \
     firefox \
     openssl \
+    python3-numpy \
     && rm -rf /var/lib/apt/lists/*
 
 RUN touch /root/.Xauthority
@@ -37,24 +38,21 @@ startxfce4\n' > /root/.vnc/xstartup
 
 RUN chmod +x /root/.vnc/xstartup
 
+# Modifikasi UI noVNC agar meminta password secara eksplisit melalui URL/Token
+RUN sed -i 's/UI.connect()/UI.connect(UI.getSetting("password") || prompt("Masukkan Password:"))/g' /usr/share/novnc/app/ui.js || true
+
 EXPOSE 5901
 EXPOSE 6080
 
 CMD bash -c '\
-# Memastikan password tidak lebih dari 8 karakter untuk kompatibilitas VNC murni
-# dan memastikan tidak ditanya view-only password
-PASSWORD=${VNC_PASSWORD:-rahasia} && \
-PASSWORD=${PASSWORD:0:8} && \
-mkdir -p /root/.vnc && \
-echo "$PASSWORD" | vncpasswd -f > /root/.vnc/passwd && \
-chmod 600 /root/.vnc/passwd && \
+# 1. Jalankan VNC di jaringan internal (localhost) TANPA password (aman karena tidak diekspos keluar)
 vncserver :1 \
-    -localhost no \
-    -SecurityTypes VncAuth \
-    -PasswordFile /root/.vnc/passwd \
+    -localhost yes \
+    -SecurityTypes None \
     -geometry 1024x768 \
     -depth 24 \
     && \
+# 2. Buat sertifikat SSL
 openssl req \
     -new \
     -subj "/C=ID" \
@@ -64,9 +62,17 @@ openssl req \
     -out /root/self.pem \
     -keyout /root/self.pem \
     && \
+# 3. Buat file konfigurasi token untuk websockify
+mkdir -p /root/novnc_tokens && \
+echo "vnc: localhost:5901" > /root/novnc_tokens/token.conf && \
+# 4. Jalankan Websockify yang mengekspos port 6080 dengan password Basic Auth
+# Menggunakan VNC_PASSWORD dari Railway, default: kelvin12
+PASS=${VNC_PASSWORD:-kelvin12} && \
+echo "Memulai Websockify..." && \
 websockify \
     --web /usr/share/novnc/ \
-    6080 \
-    localhost:5901 \
     --cert /root/self.pem \
+    --auth-plugin=websockify.auth.BasicUIAuth \
+    --auth-source=$PASS \
+    6080 localhost:5901 \
 '
