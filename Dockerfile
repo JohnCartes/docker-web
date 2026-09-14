@@ -1,4 +1,3 @@
-```dockerfile
 FROM --platform=linux/amd64 ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -162,4 +161,3 @@ exec websockify \
     localhost:5901 \
     --cert /root/self.pem \
 "]
-```
