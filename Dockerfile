@@ -29,7 +29,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN touch /root/.Xauthority
 RUN mkdir -p /root/.vnc
 
-# Perbaikan xstartup script
 RUN printf '#!/bin/bash\n\
 export USER=root\n\
 startxfce4\n' > /root/.vnc/xstartup
@@ -40,10 +39,13 @@ EXPOSE 5901
 EXPOSE 6080
 
 CMD bash -c '\
+# Mengambil password dari variabel Railway, jika kosong gunakan default "rahasia"
+echo "${VNC_PASSWORD:-rahasia}" | vncpasswd -f > /root/.vnc/passwd && \
+chmod 600 /root/.vnc/passwd && \
 vncserver :1 \
     -localhost no \
-    -SecurityTypes None \
-    --I-KNOW-THIS-IS-INSECURE \
+    -SecurityTypes VncAuth \
+    -PasswordFile /root/.vnc/passwd \
     -geometry 1024x768 \
     -depth 24 \
     && \
