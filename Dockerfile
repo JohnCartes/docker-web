@@ -41,7 +41,12 @@ EXPOSE 5901
 EXPOSE 6080
 
 CMD bash -c '\
-echo "${VNC_PASSWORD:-rahasia}" | vncpasswd -f > /root/.vnc/passwd && \
+# Memastikan password tidak lebih dari 8 karakter untuk kompatibilitas VNC murni
+# dan memastikan tidak ditanya view-only password
+PASSWORD=${VNC_PASSWORD:-rahasia} && \
+PASSWORD=${PASSWORD:0:8} && \
+mkdir -p /root/.vnc && \
+echo "$PASSWORD" | vncpasswd -f > /root/.vnc/passwd && \
 chmod 600 /root/.vnc/passwd && \
 vncserver :1 \
     -localhost no \
