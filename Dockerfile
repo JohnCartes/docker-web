@@ -38,21 +38,26 @@ startxfce4\n' > /root/.vnc/xstartup
 
 RUN chmod +x /root/.vnc/xstartup
 
-# Modifikasi UI noVNC agar meminta password secara eksplisit melalui URL/Token
-RUN sed -i 's/UI.connect()/UI.connect(UI.getSetting("password") || prompt("Masukkan Password:"))/g' /usr/share/novnc/app/ui.js || true
-
 EXPOSE 5901
 EXPOSE 6080
 
 CMD bash -c '\
-# 1. Jalankan VNC di jaringan internal (localhost) TANPA password (aman karena tidak diekspos keluar)
+# Mengambil password HANYA dari Railway.
+PASS="${VNC_PASSWORD}" && \
+# Jika variabel Railway gagal terbaca, gunakan password acak agar tetap aman
+if [ -z "$PASS" ]; then PASS="AcakAman99!"; fi && \
+\
+mkdir -p /root/.vnc && \
+echo "$PASS" | vncpasswd -f > /root/.vnc/passwd && \
+chmod 600 /root/.vnc/passwd && \
+\
 vncserver :1 \
-    -localhost yes \
-    -SecurityTypes None \
+    -localhost no \
+    -SecurityTypes VncAuth \
+    -PasswordFile /root/.vnc/passwd \
     -geometry 1024x768 \
     -depth 24 \
     && \
-# 2. Buat sertifikat SSL
 openssl req \
     -new \
     -subj "/C=ID" \
@@ -62,17 +67,9 @@ openssl req \
     -out /root/self.pem \
     -keyout /root/self.pem \
     && \
-# 3. Buat file konfigurasi token untuk websockify
-mkdir -p /root/novnc_tokens && \
-echo "vnc: localhost:5901" > /root/novnc_tokens/token.conf && \
-# 4. Jalankan Websockify yang mengekspos port 6080 dengan password Basic Auth
-# Menggunakan VNC_PASSWORD dari Railway, default: kelvin12
-PASS=${VNC_PASSWORD:-kelvin12} && \
-echo "Memulai Websockify..." && \
 websockify \
     --web /usr/share/novnc/ \
+    6080 \
+    localhost:5901 \
     --cert /root/self.pem \
-    --auth-plugin=websockify.auth.BasicUIAuth \
-    --auth-source=$PASS \
-    6080 localhost:5901 \
 '
