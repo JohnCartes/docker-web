@@ -1,6 +1,5 @@
 FROM --platform=linux/amd64 ubuntu:22.04
 
-
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Jakarta
 ENV USER=root
@@ -43,20 +42,20 @@ EXPOSE 5901
 EXPOSE 6080
 
 CMD bash -c '\
-# Membaca variabel dari Railway dan membuang HAPUS SEMUA karakter Enter/Spasi tersembunyi
-# Perintah tr -d "\n\r" akan menghapus karakter newline dan carriage return
-PASS=$(echo -n "${VNC_PASSWORD}" | tr -d "\n\r") && \
+# Membaca variabel dari Railway dan membuang HAPUS SEMUA karakter KECUALI huruf dan angka
+PASS=$(echo "${VNC_PASSWORD}" | grep -o "[a-zA-Z0-9]*" | tr -d "\n") && \
 \
 # Jika ternyata kosong, gunakan password cadangan
 if [ -z "$PASS" ]; then PASS="AcakAman99"; fi && \
 \
 echo "=== CEK VARIABEL RAILWAY ===" && \
 echo "Panjang karakter password yang terbaca adalah: ${#PASS} huruf." && \
+echo "Password yang akan digunakan adalah murni: $PASS" && \
 echo "============================" && \
 \
 mkdir -p /root/.vnc && \
 # Buat password VNC
-printf "%s" "$PASS" | vncpasswd -f > /root/.vnc/passwd && \
+printf "%s\n%s\n" "$PASS" "$PASS" | vncpasswd -f > /root/.vnc/passwd && \
 chmod 600 /root/.vnc/passwd && \
 \
 vncserver :1 \
