@@ -42,6 +42,7 @@ CMD bash -c '\
 vncserver :1 \
     -localhost no \
     -SecurityTypes None \
+    --I-KNOW-THIS-IS-INSECURE \
     -geometry 1024x768 \
     -depth 24 \
     && \
